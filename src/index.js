@@ -11,6 +11,8 @@ function WebrtcPeerServer(io) {
     EventEmitter.call(this)
 
     io.on('connection', (socket) => {
+        this.emit('connect', socket)
+
         socket.on('webrtc-peer[discover]', this._onDiscover.bind(this, socket))
         socket.on('disconnect', this._onDisconnect.bind(this, socket));
     })
@@ -22,6 +24,7 @@ WebrtcPeerServer.prototype._onDiscover = function(socket, discoveryData) {
         socket.removeAllListeners('webrtc-peer[offer]');
         socket.removeAllListeners('webrtc-peer[signal]');
         socket.removeAllListeners('webrtc-peer[reject]');
+        socket.removeAllListeners('webrtc-peer[message]');
 
         socket.emit('webrtc-peer[discover]', { id: socket.id, discoveryData })
 
@@ -72,6 +75,16 @@ WebrtcPeerServer.prototype._onReject = function(socket, { target, sessionId, met
         metadata
     })
 }
+
+WebrtcPeerServer.prototype._onMessage = function(socket, { initiator, target, data }) {
+    console.log('onMessage:', socket.id, initiator, target, data);
+
+    socket.broadcast.to(target).emit('webrtc-peer[message]', {
+        from: initiator,
+        data: data
+    })
+}
+
 
 WebrtcPeerServer.prototype._onDisconnect = function(socket) {
     this.emit('disconnect', socket)
